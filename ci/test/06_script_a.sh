@@ -20,7 +20,7 @@ fi
 END_FOLD
 
 mkdir -p build
-
+#Test
 # Temporarily disable errexit, because Travis macOS fails without error message
 set +o errexit
 cd build || (echo "could not enter build directory"; exit 1)
