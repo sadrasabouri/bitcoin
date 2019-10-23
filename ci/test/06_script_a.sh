@@ -6,6 +6,20 @@
 
 export LC_ALL=C.UTF-8
 
+#cd command is misunderstanded by cd Travis built-in command in some macOS
+#lcd='cd'
+#if [[ "$OSTYPE" == "darwin"* ]]; then
+#  lcd='type cd'
+#fi
+type cd
+#Avoid repeating this block several places in code
+safe_cd()
+{
+  set +o errexit
+  #$lcd $1 || (echo $2; exit 1)
+  set -o errexit
+}
+
 BITCOIN_CONFIG_ALL="--disable-dependency-tracking --prefix=$BASE_BUILD_DIR/depends/$HOST --bindir=$BASE_OUTDIR/bin --libdir=$BASE_OUTDIR/lib"
 if [ -z "$NO_DEPENDS" ]; then
   DOCKER_EXEC ccache --max-size=$CCACHE_SIZE
@@ -22,9 +36,7 @@ END_FOLD
 mkdir -p build
 
 # Temporarily disable errexit, because Travis macOS fails without error message
-set +o errexit
-cd build || (echo "could not enter build directory"; exit 1)
-set -o errexit
+safe_cd build "could not enter build directory"
 
 BEGIN_FOLD configure
 DOCKER_EXEC ../configure --cache-file=config.cache $BITCOIN_CONFIG_ALL $BITCOIN_CONFIG || ( cat config.log && false)
@@ -34,9 +46,7 @@ BEGIN_FOLD distdir
 DOCKER_EXEC make distdir VERSION=$HOST
 END_FOLD
 
-set +o errexit
-cd "bitcoin-$HOST" || (echo "could not enter distdir bitcoin-$HOST"; exit 1)
-set -o errexit
+safe_cd "bitcoin-$HOST" "could not enter distdir bitcoin-$HOST"
 
 BEGIN_FOLD configure
 DOCKER_EXEC ./configure --cache-file=../config.cache $BITCOIN_CONFIG_ALL $BITCOIN_CONFIG || ( cat config.log && false)
@@ -49,6 +59,4 @@ BEGIN_FOLD build
 DOCKER_EXEC make $MAKEJOBS $GOAL || ( echo "Build failure. Verbose build follows." && DOCKER_EXEC make $GOAL V=1 ; false )
 END_FOLD
 
-set +o errexit
-cd ${BASE_BUILD_DIR} || (echo "could not enter travis build dir $BASE_BUILD_DIR"; exit 1)
-set -o errexit
+safe_cd ${BASE_BUILD_DIR} "could not enter travis build dir $BASE_BUILD_DIR"

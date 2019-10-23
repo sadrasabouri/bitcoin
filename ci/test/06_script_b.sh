@@ -6,10 +6,22 @@
 
 export LC_ALL=C.UTF-8
 
+#cd command is misunderstanded by cd Travis built-in command in some macOS
+#lcd='cd'
+#if [[ "$OSTYPE" == "darwin"* ]]; then
+#  lcd='type cd'
+#fi
+type cd
+#Avoid repeating this block several places in code
+safe_cd()
+{
+  set +o errexit
+  #$lcd $1 || (echo $2; exit 1)
+  set -o errexit
+}
+
 # Temporarily disable errexit, because Travis macOS fails without error message
-set +o errexit
-cd "build/bitcoin-$HOST" || (echo "could not enter distdir build/bitcoin-$HOST"; exit 1)
-set -o errexit
+safe_cd "build/bitcoin-$HOST" "could not enter distdir build/bitcoin-$HOST"
 
 if [ -n "$QEMU_USER_CMD" ]; then
   BEGIN_FOLD wrap-qemu
@@ -49,6 +61,4 @@ if [ "$RUN_FUZZ_TESTS" = "true" ]; then
   END_FOLD
 fi
 
-set +o errexit
-cd ${BASE_BUILD_DIR} || (echo "could not enter travis build dir $BASE_BUILD_DIR"; exit 1)
-set -o errexit
+safe_cd ${BASE_BUILD_DIR} "could not enter travis build dir $BASE_BUILD_DIR"
